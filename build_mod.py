@@ -248,6 +248,13 @@ def main():
     print("Упаковываем мод в NoPride_P.pak...")
     if os.path.exists("NoPride_P.pak"):
         os.remove("NoPride_P.pak")
+    
+    # Удаляем устаревший/оригинальный .ubulk, так как dds_tools сохраняет текстуру в .uexp
+    ubulk_path = atlas_uasset.replace(".uasset", ".ubulk")
+    if os.path.exists(ubulk_path):
+        os.remove(ubulk_path)
+        print("Удален неиспользуемый файл ubulk перед упаковкой.")
+
     run_command([repak_exe, "pack", "extracted", "NoPride_P.pak"])
 
     # Шаг 6. Очистка временных файлов
