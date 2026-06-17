@@ -1,0 +1,40 @@
+#python
+*__pycache__
+python
+.pytest_cache
+.coverage
+htmlcov
+
+#generated files
+*.exe
+*.dll
+*.so
+*.dylib
+*.zip
+gui_config.json
+exported
+injected
+converted
+test
+tmp
+
+#for testing
+*.bat
+!bat/*.bat
+!.github/workflows/*.bat
+*.sh
+*.txt
+!changelog.txt
+!tests/test_file_path_.txt
+tests/local_test_cases.json
+
+#texture files
+*.dds
+!tests/array.dds
+*.png
+*.tga
+*.hdr
+*.uasset
+*.uexp
+*.ubulk
+*.uptnl

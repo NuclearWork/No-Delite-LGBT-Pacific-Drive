@@ -1,0 +1,119 @@
+name: build
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  ZIP_NAME: UE4-DDS-Tools
+  GUI_VERSION: v0.6.3
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+
+      - name: Check tag
+        run: |
+          if [[ ${{ github.ref }} == refs/tags/v* ]]; then
+            TAG=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")
+          else
+            TAG=$(echo ${{ github.sha }} | cut -c1-7)
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+        shell: bash
+
+      - uses: actions/checkout@v4
+      - run: git submodule update --init --recursive
+
+      - name: Download embeddable python
+        run: |
+          mkdir -p release
+          cd release
+          ../.github/workflows/download_portable_python.bat
+        shell: cmd
+
+      - name: build dll
+        run: |
+          external/Texconv-Custom-DLL/batch_files/build_without_vcruntime.bat
+          mkdir -p release/src/directx
+          cp external/Texconv-Custom-DLL/texconv.dll release/src/directx
+
+      - name: Copy files
+        run: |
+          cp -r src release
+          cp docs/changelog.txt release
+          cp docs/README.url release
+          cp LICENSE release/src
+          cp -r release release_gui
+          cp bat/* release
+        shell: bash
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Meson
+        run: pip install meson
+
+      - name: Prepare MSVC for Windows
+        if: runner.os == 'Windows'
+        uses: bus1/cabuild/action/msdevshell@v1
+        with:
+          architecture: x64
+
+      - name: Build Tuw
+        run: |
+          external/tuw/batch_files/build_with_ucrt.bat
+          cp external/tuw/build/ReleaseUCRT/Tuw.exe release_gui/GUI.exe
+          cp gui_definition.json release_gui
+
+      - name: Upload as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}-${{ env.TAG }}-Batch.zip
+          path: release
+
+      - name: Upload as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}-${{ env.TAG }}-GUI.zip
+          path: release_gui
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          directory: 'release'
+          type: 'zip'
+          filename: '${{ env.ZIP_NAME }}-${{ env.TAG }}-Batch.zip'
+          exclusions: '*.git* .gitignore'
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          directory: 'release_gui'
+          type: 'zip'
+          filename: '${{ env.ZIP_NAME }}-${{ env.TAG }}-GUI.zip'
+          exclusions: '*.git* .gitignore'
+
+      - name: Create Release Draft
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.TAG }}
+          body: |
+            Changelog
+            - First Change
+            - Second Change
+          draft: true
+          prerelease: false
+
+      - name: Upload Release Asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ env.TAG }} release/${{ env.ZIP_NAME }}-${{ env.TAG }}-Batch.zip
+          gh release upload ${{ env.TAG }} release_gui/${{ env.ZIP_NAME }}-${{ env.TAG }}-GUI.zip

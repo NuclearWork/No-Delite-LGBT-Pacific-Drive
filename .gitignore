@@ -1,0 +1,24 @@
+# Временные файлы и собранные архивы мода
+NoPride_P.pak
+temp.png
+temp.dds
+T_Flags_01_D_mod.png
+T_Flags_01_D_mod.dds
+temp_out.txt
+temp_locres_status.txt
+check_locres.py
+find_game.py
+
+# Распакованные ресурсы игры (слишком большие для git)
+extracted/
+Output/
+temp_data/
+
+# Исполняемые файлы инструментов
+FModel.exe
+repak.exe
+texconv.exe
+dds_tools/
+
+# Логи сборки
+*.log
