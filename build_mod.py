@@ -208,13 +208,13 @@ def main():
 
         # Инжектируем DDS в uasset UI-иконки
         uasset_path = os.path.join(extracted_icons_dir, name.replace(".png", ".uasset"))
-        run_command([dds_tools_python, dds_tools_script, uasset_path, "temp.dds"])
+        run_command([dds_tools_python, dds_tools_script, uasset_path, "temp.dds", "--save_folder", os.path.dirname(uasset_path)])
 
     # Сохраняем атлас и конвертируем его
     print("Сохраняем атлас и конвертируем его в DDS...")
     atlas.save("T_Flags_01_D_mod.png")
     run_command([texconv_exe, "-f", "BC3_UNORM", "-m", "1", "-y", "-o", ".", "T_Flags_01_D_mod.png"])
-    run_command([dds_tools_python, dds_tools_script, atlas_uasset, "T_Flags_01_D_mod.dds"])
+    run_command([dds_tools_python, dds_tools_script, atlas_uasset, "T_Flags_01_D_mod.dds", "--save_folder", os.path.dirname(atlas_uasset)])
 
     # Шаг 4. Патч строк локализации в Game.locres
     print("Применяем патч локализации к Game.locres...")
