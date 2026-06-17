@@ -245,9 +245,9 @@ def main():
     print(f"Патч локализации завершен! Успешно изменено строк: {patched_count}")
 
     # Шаг 5. Упаковка пака с модом
-    print("Упаковываем мод в NoPride_P.pak...")
-    if os.path.exists("NoPride_P.pak"):
-        os.remove("NoPride_P.pak")
+    print("Упаковываем мод в zzz_NoPride_P.pak...")
+    if os.path.exists("zzz_NoPride_P.pak"):
+        os.remove("zzz_NoPride_P.pak")
     
     # Удаляем устаревший/оригинальный .ubulk, так как dds_tools сохраняет текстуру в .uexp
     ubulk_path = atlas_uasset.replace(".uasset", ".ubulk")
@@ -255,14 +255,24 @@ def main():
         os.remove(ubulk_path)
         print("Удален неиспользуемый файл ubulk перед упаковкой.")
 
-    run_command([repak_exe, "pack", "extracted", "NoPride_P.pak"])
+    run_command([repak_exe, "pack", "extracted", "zzz_NoPride_P.pak"])
 
     # Копирование собранного пака в Steam
     steam_pak_dir = r"Z:\SteamLibrary\steamapps\common\Pacific Drive\PenDriverPro\Content\Paks\~mods"
-    steam_pak_path = os.path.join(steam_pak_dir, "NoPride_P.pak")
-    print(f"Копируем собранный NoPride_P.pak в папку модов игры Steam...")
+    steam_pak_path = os.path.join(steam_pak_dir, "zzz_NoPride_P.pak")
+    old_steam_pak_path = os.path.join(steam_pak_dir, "NoPride_P.pak")
+    
+    # Удаляем старый пак NoPride_P.pak из папки игры
+    if os.path.exists(old_steam_pak_path):
+        try:
+            os.remove(old_steam_pak_path)
+            print(f"Старый файл {old_steam_pak_path} успешно удален.")
+        except Exception as e:
+            print(f"Не удалось удалить старый файл {old_steam_pak_path}: {e}")
+
+    print(f"Копируем собранный zzz_NoPride_P.pak в папку модов игры Steam...")
     os.makedirs(steam_pak_dir, exist_ok=True)
-    shutil.copy("NoPride_P.pak", steam_pak_path)
+    shutil.copy("zzz_NoPride_P.pak", steam_pak_path)
     print(f"Мод успешно скопирован в папку игры: {steam_pak_path}")
 
     # Шаг 6. Очистка временных файлов
@@ -271,7 +281,7 @@ def main():
         if os.path.exists(temp_file):
             os.remove(temp_file)
 
-    print("Все шаги выполнены успешно! Мод собран в NoPride_P.pak.")
+    print("Все шаги выполнены успешно! Мод собран в zzz_NoPride_P.pak.")
 
 if __name__ == '__main__':
     main()
