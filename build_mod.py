@@ -3,6 +3,7 @@ import os
 import shutil
 import glob
 import subprocess
+import json
 from PIL import Image
 
 # Словарь координат в оригинальной текстуре-атласе (ширина ячейки 192px, высота 128px/256px)
@@ -32,6 +33,20 @@ mapping = {
     'Flag-Straight_Ally.png': (0, 640, 192, 128),
     'Flag-Transgender.png': (384, 640, 192, 128),
 }
+
+# Флаг использования кастомных координат
+is_custom_mapping = False
+
+# Попытка загрузить кастомные координаты из визуального редактора
+mapping_file = "custom_mapping.json"
+if os.path.exists(mapping_file):
+    try:
+        with open(mapping_file, "r", encoding="utf-8") as f:
+            mapping = json.load(f)
+        is_custom_mapping = True
+        print("ВНИМАНИЕ: Успешно загружены кастомные координаты стикеров из custom_mapping.json!")
+    except Exception as e:
+        print(f"Ошибка чтения custom_mapping.json: {e}")
 
 # Карта строк локализации для замены (оригинальный русский текст -> новые стикеры)
 loc_map = {
@@ -160,25 +175,33 @@ def main():
             W_cell, H_cell = 192, 128
 
         # --- 3.1 Вставка в атлас ---
-        # Вычисляем масштабирование на полигоне машины с сохранением пропорций
-        scale_atlas = min(W_poly / W_pic, H_poly / H_pic)
-        w_car = W_pic * scale_atlas
-        h_car = H_pic * scale_atlas
+        if is_custom_mapping:
+            # Если координаты настроены пользователем вручную, используем их напрямую
+            # (пользователь в GUI-редакторе уже видит финальный размер и положение)
+            new_w = w
+            new_h = h
+            ox = 0
+            oy = 0
+        else:
+            # Вычисляем масштабирование на полигоне машины с сохранением пропорций
+            scale_atlas = min(W_poly / W_pic, H_poly / H_pic)
+            w_car = W_pic * scale_atlas
+            h_car = H_pic * scale_atlas
 
-        # Переносим размеры на сетку атласа
-        w_cell_scaled = w_car * (W_cell / W_poly)
-        h_cell_scaled = h_car * (H_cell / H_poly)
+            # Переносим размеры на сетку атласа
+            w_cell_scaled = w_car * (W_cell / W_poly)
+            h_cell_scaled = h_car * (H_cell / H_poly)
 
-        # Вычисляем смещение центрирования
-        offset_x_car = (W_poly - w_car) / 2
-        offset_y_car = (H_poly - h_car) / 2
-        offset_x_cell = offset_x_car * (W_cell / W_poly)
-        offset_y_cell = offset_y_car * (H_cell / H_poly)
+            # Вычисляем смещение центрирования
+            offset_x_car = (W_poly - w_car) / 2
+            offset_y_car = (H_poly - h_car) / 2
+            offset_x_cell = offset_x_car * (W_cell / W_poly)
+            offset_y_cell = offset_y_car * (H_cell / H_poly)
 
-        new_w = int(round(w_cell_scaled))
-        new_h = int(round(h_cell_scaled))
-        ox = int(round(offset_x_cell))
-        oy = int(round(offset_y_cell))
+            new_w = int(round(w_cell_scaled))
+            new_h = int(round(h_cell_scaled))
+            ox = int(round(offset_x_cell))
+            oy = int(round(offset_y_cell))
 
         # Масштабируем картинку для атласа
         pic_resized_atlas = pic.resize((new_w, new_h), Image.Resampling.LANCZOS)
@@ -231,7 +254,6 @@ def main():
             
         for orig_str in loc_map[orig_name]:
             for encoding in ['utf-16-le', 'utf-8']:
-                # Ищем оригинальную строку в разных регистрах
                 for search_str in [orig_str, orig_str.upper()]:
                     search_bytes = search_str.encode(encoding)
                     if search_bytes in locres_data:
@@ -245,35 +267,71 @@ def main():
     print(f"Патч локализации завершен! Успешно изменено строк: {patched_count}")
 
     # Шаг 5. Упаковка пака с модом
-    print("Упаковываем мод в zzz_NoPride_P.pak...")
-    if os.path.exists("zzz_NoPride_P.pak"):
-        os.remove("zzz_NoPride_P.pak")
+    mod_name = "ZZZZ_NOPRIDE_P.pak"
+    print(f"Упаковываем мод в {mod_name}...")
+    if os.path.exists(mod_name):
+        os.remove(mod_name)
     
-    # Удаляем устаревший/оригинальный .ubulk, так как dds_tools сохраняет текстуру в .uexp
     ubulk_path = atlas_uasset.replace(".uasset", ".ubulk")
     if os.path.exists(ubulk_path):
         os.remove(ubulk_path)
         print("Удален неиспользуемый файл ubulk перед упаковкой.")
 
-    run_command([repak_exe, "pack", "extracted", "zzz_NoPride_P.pak"])
+    run_command([repak_exe, "pack", "extracted", mod_name])
 
-    # Копирование собранного пака в Steam
+    # Копирование собранного пака в Steam и очистка старых версий
     steam_pak_dir = r"Z:\SteamLibrary\steamapps\common\Pacific Drive\PenDriverPro\Content\Paks\~mods"
-    steam_pak_path = os.path.join(steam_pak_dir, "zzz_NoPride_P.pak")
-    old_steam_pak_path = os.path.join(steam_pak_dir, "NoPride_P.pak")
-    
-    # Удаляем старый пак NoPride_P.pak из папки игры
-    if os.path.exists(old_steam_pak_path):
-        try:
-            os.remove(old_steam_pak_path)
-            print(f"Старый файл {old_steam_pak_path} успешно удален.")
-        except Exception as e:
-            print(f"Не удалось удалить старый файл {old_steam_pak_path}: {e}")
-
-    print(f"Копируем собранный zzz_NoPride_P.pak в папку модов игры Steam...")
     os.makedirs(steam_pak_dir, exist_ok=True)
-    shutil.copy("zzz_NoPride_P.pak", steam_pak_path)
+    
+    print("Удаляем старые версии мода из папки Steam...")
+    for old_pak in glob.glob(os.path.join(steam_pak_dir, "*NoPride_P*.pak")) + glob.glob(os.path.join(steam_pak_dir, "*NOPRIDE_P*.pak")):
+        try:
+            os.remove(old_pak)
+            print(f"Удален старый мод: {old_pak}")
+        except Exception as e:
+            print(f"Не удалось удалить {old_pak}: {e}")
+
+    steam_pak_path = os.path.join(steam_pak_dir, mod_name)
+    print(f"Копируем собранный {mod_name} в папку модов игры Steam...")
+    shutil.copy(mod_name, steam_pak_path)
     print(f"Мод успешно скопирован в папку игры: {steam_pak_path}")
+
+    # Шаг 6. Генерация документации для GitHub
+    print("Генерация документации для GitHub...")
+    docs_dir = "docs"
+    os.makedirs(docs_dir, exist_ok=True)
+    
+    readme_content = """# Pacific Drive: No Pride Mod (Custom Stickers)
+
+Этот мод заменяет все 23 радужных стикера и наклейки (LGBTQ+) в игре Pacific Drive на пользовательские мемы и картинки.
+
+## Особенности
+- Полностью удаляет оригинальные текстуры ЛГБТ-флагов из атласа игры (используется чистый холст).
+- Заменяет UI-иконки в меню кастомизации на ваши собственные картинки.
+- Изменяет локализацию (русские названия и описания) в меню кастомизации под названия ваших файлов.
+- Автоматически собирает мод в формате `.pak` с наивысшим приоритетом (`zzzz_NoPride_P.pak`), чтобы предотвратить конфликты с другими модами.
+
+## Как использовать мод
+1. Скачайте файл `zzzz_NoPride_P.pak` из релизов.
+2. Переместите его в папку модов игры:
+   `[Папка_Steam]\\steamapps\\common\\Pacific Drive\\PenDriverPro\\Content\\Paks\\~mods\\`
+3. Запустите игру и наслаждайтесь новыми наклейками в меню кастомизации автомобиля!
+
+## Для разработчиков (Как собрать мод самому)
+Если вы хотите использовать свои собственные картинки:
+1. Поместите 23 квадратных (или около того) картинок в формате `.jpg` или `.png` в папку `pikcher/23icon/`.
+2. Запустите скрипт `python build_mod.py`.
+3. Скрипт автоматически:
+   - Создаст новый атлас `T_Flags_01_D` с вашими картинками.
+   - Сгенерирует UI-иконки для меню.
+   - Обновит файл русской локализации `Game.locres`.
+   - Упакует всё в готовый `zzzz_NoPride_P.pak` и скопирует в вашу папку Steam!
+"""
+    with open(os.path.join(docs_dir, "README.md"), "w", encoding="utf-8") as f:
+        f.write(readme_content)
+    with open("README.md", "w", encoding="utf-8") as f:
+        f.write(readme_content)
+    print("Документация сгенерирована (README.md).")
 
     # Шаг 6. Очистка временных файлов
     print("Очистка временных файлов...")
@@ -281,7 +339,7 @@ def main():
         if os.path.exists(temp_file):
             os.remove(temp_file)
 
-    print("Все шаги выполнены успешно! Мод собран в zzz_NoPride_P.pak.")
+    print("Все шаги выполнены успешно! Мод собран в ZZZZ_NOPRIDE_P.pak.")
 
 if __name__ == '__main__':
     main()
