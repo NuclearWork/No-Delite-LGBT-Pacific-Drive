@@ -257,6 +257,14 @@ def main():
 
     run_command([repak_exe, "pack", "extracted", "NoPride_P.pak"])
 
+    # Копирование собранного пака в Steam
+    steam_pak_dir = r"Z:\SteamLibrary\steamapps\common\Pacific Drive\PenDriverPro\Content\Paks\~mods"
+    steam_pak_path = os.path.join(steam_pak_dir, "NoPride_P.pak")
+    print(f"Копируем собранный NoPride_P.pak в папку модов игры Steam...")
+    os.makedirs(steam_pak_dir, exist_ok=True)
+    shutil.copy("NoPride_P.pak", steam_pak_path)
+    print(f"Мод успешно скопирован в папку игры: {steam_pak_path}")
+
     # Шаг 6. Очистка временных файлов
     print("Очистка временных файлов...")
     for temp_file in ["temp.png", "temp.dds", "T_Flags_01_D_mod.png", "T_Flags_01_D_mod.dds"]:
