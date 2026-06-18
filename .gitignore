@@ -32,7 +32,9 @@ ZZZZ_NOPRIDE_P.pak
 !CMakeLists.txt
 *.png
 !T_Flags_01_D_original.png
+!docs/images/*.png
 *.dds
+!docs/images/*.dds
 !pikcher/**/*.png
 !pikcher/**/*.jpg
 !pikcher/**/*.jpeg
