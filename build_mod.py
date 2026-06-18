@@ -37,16 +37,6 @@ mapping = {
 # Флаг использования кастомных координат
 is_custom_mapping = False
 
-# Попытка загрузить кастомные координаты из визуального редактора
-mapping_file = "custom_mapping.json"
-if os.path.exists(mapping_file):
-    try:
-        with open(mapping_file, "r", encoding="utf-8") as f:
-            mapping = json.load(f)
-        is_custom_mapping = True
-        print("ВНИМАНИЕ: Успешно загружены кастомные координаты стикеров из custom_mapping.json!")
-    except Exception as e:
-        print(f"Ошибка чтения custom_mapping.json: {e}")
 
 # Карта строк локализации для замены (оригинальный русский текст -> новые стикеры)
 loc_map = {
@@ -177,34 +167,44 @@ def main():
         # --- 3.1 Вставка в атлас ---
         if is_custom_mapping:
             # Если координаты настроены пользователем вручную, используем их напрямую
-            # (пользователь в GUI-редакторе уже видит финальный размер и положение)
             new_w = w
             new_h = h
             ox = 0
             oy = 0
         else:
-            # Вычисляем масштабирование на полигоне машины с сохранением пропорций
-            scale_atlas = min(W_poly / W_pic, H_poly / H_pic)
-            w_car = W_pic * scale_atlas
-            h_car = H_pic * scale_atlas
+            # Используем кроп (заполнение ячейки с обрезкой краев), чтобы картинка была максимально крупной.
+            # Оставляем минимальный отступ 5%, чтобы избежать сильного протекания на соседние ячейки
+            padding_x = int(W_cell * 0.05)
+            padding_y = int(H_cell * 0.05)
+            
+            target_w = W_cell - padding_x * 2
+            target_h = H_cell - padding_y * 2
+            
+            # Вычисляем масштаб для заполнения (максимальный из двух)
+            scale_to_fill = max(target_w / W_pic, target_h / H_pic)
+            
+            w_scaled = int(round(W_pic * scale_to_fill))
+            h_scaled = int(round(H_pic * scale_to_fill))
+            
+            # Масштабируем картинку
+            pic_scaled = pic.resize((w_scaled, h_scaled), Image.Resampling.LANCZOS)
+            
+            # Обрезаем центр (кроп)
+            left = (w_scaled - target_w) / 2
+            top = (h_scaled - target_h) / 2
+            right = (w_scaled + target_w) / 2
+            bottom = (h_scaled + target_h) / 2
+            
+            pic_cropped = pic_scaled.crop((left, top, right, bottom))
+            
+            # Настройки для вставки в атлас
+            pic_resized_atlas = pic_cropped
+            new_w = target_w
+            new_h = target_h
+            ox = padding_x
+            oy = padding_y
 
-            # Переносим размеры на сетку атласа
-            w_cell_scaled = w_car * (W_cell / W_poly)
-            h_cell_scaled = h_car * (H_cell / H_poly)
-
-            # Вычисляем смещение центрирования
-            offset_x_car = (W_poly - w_car) / 2
-            offset_y_car = (H_poly - h_car) / 2
-            offset_x_cell = offset_x_car * (W_cell / W_poly)
-            offset_y_cell = offset_y_car * (H_cell / H_poly)
-
-            new_w = int(round(w_cell_scaled))
-            new_h = int(round(h_cell_scaled))
-            ox = int(round(offset_x_cell))
-            oy = int(round(offset_y_cell))
-
-        # Масштабируем картинку для атласа
-        pic_resized_atlas = pic.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        # Вставляем картинку в атлас
         atlas.paste(pic_resized_atlas, (x + ox, y + oy), pic_resized_atlas)
 
         # --- 3.2 Генерация UI-иконки ---
@@ -236,7 +236,7 @@ def main():
     # Сохраняем атлас и конвертируем его
     print("Сохраняем атлас и конвертируем его в DDS...")
     atlas.save("T_Flags_01_D_mod.png")
-    run_command([texconv_exe, "-f", "BC3_UNORM", "-m", "1", "-y", "-o", ".", "T_Flags_01_D_mod.png"])
+    run_command([texconv_exe, "-f", "BC3_UNORM", "-y", "-o", ".", "T_Flags_01_D_mod.png"])
     run_command([dds_tools_python, dds_tools_script, atlas_uasset, "T_Flags_01_D_mod.dds", "--save_folder", os.path.dirname(atlas_uasset)])
 
     # Шаг 4. Патч строк локализации в Game.locres

@@ -22,3 +22,27 @@ dds_tools/
 
 # Логи сборки
 *.log
+
+# Файлы модов
+*NoPride_P.pak
+ZZZZ_NOPRIDE_P.pak
+
+# Отчеты и дебаг-изображения
+*.txt
+!CMakeLists.txt
+*.png
+!T_Flags_01_D_original.png
+*.dds
+!pikcher/**/*.png
+!pikcher/**/*.jpg
+!pikcher/**/*.jpeg
+
+# Папки для разработки
+scratch/
+coord_check/
+debug_crops/
+extracted_icons_png/
+original_icons_png/
+original_pngs/
+archives/
+dev_tools/
