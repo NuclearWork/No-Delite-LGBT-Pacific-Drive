@@ -24,8 +24,8 @@ dds_tools/
 *.log
 
 # Файлы модов
-*NoPride_P.pak
-ZZZZ_NOPRIDE_P.pak
+*.pak
+!Сам_Мод/ZZZZ_NOPRIDE_P.pak
 
 # Отчеты и дебаг-изображения
 *.txt
