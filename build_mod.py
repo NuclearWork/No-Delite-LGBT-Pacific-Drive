@@ -351,6 +351,12 @@ def main():
 
     run_command([repak_exe, "pack", "extracted", mod_name])
 
+    # Копирование собранного пака в папку "Сам_Мод" для релиза/гитхаба
+    sam_mod_dir = "Сам_Мод"
+    if os.path.exists(sam_mod_dir):
+        shutil.copy(mod_name, os.path.join(sam_mod_dir, mod_name))
+        print(f"Копия мода сохранена в папку {sam_mod_dir}", flush=True)
+
     # Копирование собранного пака в Steam и очистка старых версий
     steam_pak_dir = r"Z:\SteamLibrary\steamapps\common\Pacific Drive\PenDriverPro\Content\Paks\~mods"
     os.makedirs(steam_pak_dir, exist_ok=True)

@@ -467,34 +467,29 @@ class StickerStudio(ctk.CTk):
         self.log_textbox.delete("1.0", "end")
         self.log_textbox.insert("end", "Запуск сборщика мода...\n")
         
+        class TextRedirector(object):
+            def __init__(self, queue_callback):
+                self.queue_callback = queue_callback
+            def write(self, string):
+                self.queue_callback(string)
+            def flush(self):
+                pass
+        
         def run():
+            import sys
+            import build_mod
+            
+            old_stdout = sys.stdout
+            sys.stdout = TextRedirector(self.queue_log)
+            
             try:
-                process = subprocess.Popen(
-                    ["python", "build_mod.py"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1,
-                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-                )
-                
-                while True:
-                    line = process.stdout.readline()
-                    if not line:
-                        break
-                    self.queue_log(line)
-                    
-                process.wait()
-                if process.returncode == 0:
-                    self.queue_log("\n[УСПЕХ] Мод успешно собран и скопирован в папку Steam!\n")
-                    self.after(0, lambda: messagebox.showinfo("Успех", "Мод успешно собран и установлен в игру!"))
-                else:
-                    self.queue_log(f"\n[ОШИБКА] Сборщик завершился с кодом {process.returncode}\n")
-                    self.after(0, lambda: messagebox.showerror("Ошибка", f"Сборка завершилась с ошибкой! Код: {process.returncode}"))
+                # Запускаем сборщик напрямую
+                build_mod.main()
             except Exception as e:
-                self.queue_log(f"\n[ИСКЛЮЧЕНИЕ] Ошибка выполнения: {str(e)}\n")
-                self.after(0, lambda: messagebox.showerror("Ошибка", f"Не удалось запустить сборку:\n{e}"))
+                self.queue_log(f"\n[ОШИБКА] Сборка завершилась с ошибкой: {str(e)}\n")
+                self.after(0, lambda: messagebox.showerror("Ошибка", f"Не удалось собрать мод:\n{e}"))
             finally:
+                sys.stdout = old_stdout
                 self.after(0, lambda: self.build_button.configure(state="normal"))
                 
         threading.Thread(target=run, daemon=True).start()
