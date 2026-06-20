@@ -73,7 +73,6 @@ else:
 # Пути к файлам и инструментам
 original_icons_dir = r"original_icons\PenDriverPro\Content\UI\Icons\00_Item_Icons\Collectibles\Illo_-_Stickers\Flags"
 extracted_icons_dir = r"extracted\PenDriverPro\Content\UI\Icons\00_Item_Icons\Collectibles\Illo_-_Stickers\Flags"
-steam_locres_path = r"Z:\SteamLibrary\steamapps\common\Pacific Drive\PenDriverPro\Content\Paks\pakchunk0-WindowsNoEditor\PenDriverPro\Content\Localization\Game\ru\Game.locres"
 extracted_locres_path = r"extracted\PenDriverPro\Content\Localization\Game\ru\Game.locres"
 atlas_uasset = r"extracted\PenDriverPro\Content\Gameplay\Inventory\Items\Car\Cosmetic\Bumper_Sticker\Materials\T_Flags_01_D.uasset"
 
@@ -211,9 +210,13 @@ def main():
         for f in glob.glob(os.path.join(original_icons_dir, ext)):
             shutil.copy(f, extracted_icons_dir)
 
-    print("Копируем оригинальный Game.locres из папки игры...", flush=True)
-    os.makedirs(os.path.dirname(extracted_locres_path), exist_ok=True)
-    shutil.copy(steam_locres_path, extracted_locres_path)
+    # Восстанавливаем Game.locres из Game_original.locres (если есть, иначе оставляем текущий)
+    print("Восстанавливаем оригинальный Game.locres...", flush=True)
+    orig_locres = extracted_locres_path.replace("Game.locres", "Game_original.locres")
+    if os.path.exists(orig_locres):
+        shutil.copy(orig_locres, extracted_locres_path)
+    else:
+        print("Внимание: Game_original.locres не найден. Если это первый запуск, то всё ОК, но если вы уже собирали мод, строки могут не обновиться.", flush=True)
 
     # Генерация нового пустого прозрачного атласа
     print("[STAGE 3/6] Создаем прозрачный атлас 1024x1024 (оригинальные pride-флаги удалены)...", flush=True)
@@ -357,23 +360,8 @@ def main():
         shutil.copy(mod_name, os.path.join(sam_mod_dir, mod_name))
         print(f"Копия мода сохранена в папку {sam_mod_dir}", flush=True)
 
-    # Копирование собранного пака в Steam и очистка старых версий
-    steam_pak_dir = r"Z:\SteamLibrary\steamapps\common\Pacific Drive\PenDriverPro\Content\Paks\~mods"
-    os.makedirs(steam_pak_dir, exist_ok=True)
-    
-    print("Удаляем старые версии мода из папки Steam...", flush=True)
-    for old_pak in glob.glob(os.path.join(steam_pak_dir, "*NoPride_P*.pak")) + glob.glob(os.path.join(steam_pak_dir, "*NOPRIDE_P*.pak")):
-        try:
-            os.remove(old_pak)
-            print(f"Удален старый мод: {old_pak}", flush=True)
-        except Exception as e:
-            print(f"Не удалось удалить {old_pak}: {e}", flush=True)
-
-    steam_pak_path = os.path.join(steam_pak_dir, mod_name)
-    print(f"Копируем собранный {mod_name} в папку модов игры Steam...", flush=True)
-    shutil.copy(mod_name, steam_pak_path)
-    print(f"Мод успешно скопирован в папку игры: {steam_pak_path}", flush=True)
-
+    # Очищаем старые файлы в локальной папке перед завершением
+    pass
     # Генерация документации для GitHub
     print("Генерация документации для GitHub...", flush=True)
     docs_dir = "docs"

@@ -486,7 +486,7 @@ class StickerStudio(ctk.CTk):
         try:
             cropped = self.original_image.transform(
                 (self.target_w, self.target_h), Image.EXTENT,
-                data=(crop_left, crop_top, crop_right, crop_bottom), resample=Image.Resampling.LANCZOS
+                data=(crop_left, crop_top, crop_right, crop_bottom), resample=Image.Resampling.BICUBIC
             )
             
             icon_dir = os.path.join("pikcher", "23icon")
@@ -679,6 +679,7 @@ class StickerStudio(ctk.CTk):
             try:
                 # Запускаем сборщик напрямую
                 build_mod.main()
+                self.after(0, self.prompt_save_mod)
             except Exception as e:
                 self.queue_log(f"\n[ОШИБКА] Сборка завершилась с ошибкой: {str(e)}\n")
                 self.after(0, lambda: messagebox.showerror("Ошибка", f"Не удалось собрать мод:\n{e}"))
@@ -687,6 +688,26 @@ class StickerStudio(ctk.CTk):
                 self.after(0, lambda: self.build_button.configure(state="normal"))
                 
         threading.Thread(target=run, daemon=True).start()
+
+    def prompt_save_mod(self):
+        """Предлагает пользователю сохранить собранный мод в его папку с игрой."""
+        mod_path = os.path.join("Сам_Мод", "ZZZZ_NOPRIDE_P.pak")
+        if not os.path.exists(mod_path):
+            return
+            
+        target_file = filedialog.asksaveasfilename(
+            defaultextension=".pak",
+            initialfile="ZZZZ_NOPRIDE_P.pak",
+            filetypes=[("Pak моды", "*.pak")],
+            title="Выбери папку ~mods в игре для сохранения мода"
+        )
+        if target_file:
+            try:
+                shutil.copy(mod_path, target_file)
+                self.queue_log(f"\n[УСПЕХ] Мод успешно сохранен в:\n{target_file}\n")
+                messagebox.showinfo("Успех", f"Мод сохранен!\n\nНе забудь запустить игру.")
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Не удалось сохранить мод:\n{e}")
 
     def queue_log(self, text):
         """Безопасная вставка лога в текстовое поле из фонового потока."""
