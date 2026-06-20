@@ -48,3 +48,8 @@ original_icons_png/
 original_pngs/
 archives/
 dev_tools/
+
+# PyInstaller
+build/
+dist/
+*.spec
