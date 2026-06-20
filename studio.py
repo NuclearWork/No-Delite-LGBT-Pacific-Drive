@@ -6,6 +6,9 @@ import os
 import json
 import threading
 import subprocess
+import zipfile
+import shutil
+import sys
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -39,6 +42,40 @@ mapping = {
 
 SLOTS_ORDERED = sorted(mapping.keys())
 
+def extract_default_assets():
+    """Распаковывает встроенные в .exe шаблоны стикеров, если локальной папки нет."""
+    is_bundle = hasattr(sys, '_MEIPASS')
+    if not is_bundle:
+        return
+        
+    bundle_dir = sys._MEIPASS
+    local_pikcher = "pikcher"
+    local_icon_dir = os.path.join(local_pikcher, "23icon")
+    local_metadata = os.path.join(local_pikcher, "metadata.json")
+    
+    if not os.path.exists(local_pikcher):
+        os.makedirs(local_pikcher)
+    if not os.path.exists(local_icon_dir):
+        os.makedirs(local_icon_dir)
+        
+    bundled_metadata = os.path.join(bundle_dir, "pikcher", "metadata.json")
+    if not os.path.exists(local_metadata) and os.path.exists(bundled_metadata):
+        try:
+            shutil.copy(bundled_metadata, local_metadata)
+        except Exception:
+            pass
+            
+    bundled_icon_dir = os.path.join(bundle_dir, "pikcher", "23icon")
+    if os.path.exists(bundled_icon_dir):
+        for f in os.listdir(bundled_icon_dir):
+            src_file = os.path.join(bundled_icon_dir, f)
+            dst_file = os.path.join(local_icon_dir, f)
+            if not os.path.exists(dst_file) and os.path.isfile(src_file):
+                try:
+                    shutil.copy(src_file, dst_file)
+                except Exception:
+                    pass
+
 class StickerStudio(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -58,6 +95,9 @@ class StickerStudio(ctk.CTk):
         self.img_scale = 1.0
         self.img_x = 0
         self.img_y = 0
+        
+        # Распаковка дефолтных ресурсов и импорт
+        extract_default_assets()
         
         # Запуск миграции и чтение метаданных
         from build_mod import migrate_if_needed
@@ -97,7 +137,7 @@ class StickerStudio(ctk.CTk):
 
         # Панель сборки мода (под картой)
         self.build_frame = ctk.CTkFrame(self.left_frame)
-        self.build_frame.pack(fill="x", padx=15, pady=10)
+        self.build_frame.pack(fill="x", padx=15, pady=5)
         
         self.build_button = ctk.CTkButton(
             self.build_frame,
@@ -107,9 +147,30 @@ class StickerStudio(ctk.CTk):
             hover_color="#18416e",
             command=self.start_build
         )
-        self.build_button.pack(fill="x", padx=10, pady=8)
+        self.build_button.pack(fill="x", padx=10, pady=5)
 
-        self.log_textbox = ctk.CTkTextbox(self.build_frame, height=130, font=("Courier", 10))
+        # Панель информации о папке мода
+        self.folder_info_frame = ctk.CTkFrame(self.build_frame, fg_color="transparent")
+        self.folder_info_frame.pack(fill="x", padx=10, pady=2)
+        self.folder_info_frame.grid_columnconfigure(0, weight=1)
+        
+        ctk.CTkLabel(
+            self.folder_info_frame, 
+            text="Папка собранного мода: Сам_Мод/", 
+            font=("Arial", 11, "bold"),
+            text_color="#aaaaaa"
+        ).grid(row=0, column=0, sticky="w", padx=5)
+        
+        self.btn_open_folder = ctk.CTkButton(
+            self.folder_info_frame, 
+            text="Открыть папку мода 📂", 
+            width=160,
+            font=("Arial", 11),
+            command=self.open_mod_folder
+        )
+        self.btn_open_folder.grid(row=0, column=1, sticky="e", padx=5)
+
+        self.log_textbox = ctk.CTkTextbox(self.build_frame, height=105, font=("Courier", 10))
         self.log_textbox.pack(fill="x", padx=10, pady=5)
         self.log_textbox.insert("1.0", "Лог сборщика мода...\n")
 
@@ -181,6 +242,28 @@ class StickerStudio(ctk.CTk):
         )
         self.btn_reset.grid(row=0, column=2, padx=5)
 
+        # Кнопки импорта/экспорта профилей
+        self.profile_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
+        self.profile_frame.pack(pady=5)
+
+        self.btn_export = ctk.CTkButton(
+            self.profile_frame, 
+            text="Экспорт набора (ZIP) 📤", 
+            fg_color="#4a4a4a",
+            hover_color="#333333",
+            command=self.export_profile
+        )
+        self.btn_export.grid(row=0, column=0, padx=5)
+
+        self.btn_import = ctk.CTkButton(
+            self.profile_frame, 
+            text="Импорт набора (ZIP) 📥", 
+            fg_color="#4a4a4a",
+            hover_color="#333333",
+            command=self.import_profile
+        )
+        self.btn_import.grid(row=0, column=1, padx=5)
+
     def draw_map(self):
         """Отрисовывает сетку атласа на холсте слева."""
         self.map_canvas.delete("all")
@@ -242,7 +325,8 @@ class StickerStudio(ctk.CTk):
         info = self.metadata.get(slot_name, {})
         letter = info.get("slot_letter", "?")
         
-        self.slot_header.configure(text=f"РЕДАКТОР СЛОТА {letter} ({slot_name.replace('.png', '')})")
+        # Исключаем техническое имя файла в скобках по требованию пользователя
+        self.slot_header.configure(text=f"РЕДАКТОР СЛОТА {letter}")
         
         # Обновляем текстовые поля ввода
         self.name_entry.delete(0, "end")
@@ -460,6 +544,116 @@ class StickerStudio(ctk.CTk):
         self.draw_map()
         self.draw_crop_canvas()
         messagebox.showinfo("Успех", f"Слот {letter} успешно очищен!")
+
+    def export_profile(self):
+        """Экспортирует всю текущую конфигурацию стикеров и текстов в ZIP-архив."""
+        path = filedialog.asksaveasfilename(
+            defaultextension=".zip",
+            filetypes=[("ZIP-архив", "*.zip")],
+            title="Экспортировать набор стикеров"
+        )
+        if not path:
+            return
+            
+        try:
+            metadata_path = os.path.join("pikcher", "metadata.json")
+            icon_dir = os.path.join("pikcher", "23icon")
+            
+            if not os.path.exists(metadata_path):
+                messagebox.showwarning("Внимание", "У вас нет сохраненных стикеров для экспорта.")
+                return
+                
+            with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Добавляем metadata.json в корень архива
+                zipf.write(metadata_path, "metadata.json")
+                
+                # Добавляем все изображения слотов
+                if os.path.exists(icon_dir):
+                    for f in os.listdir(icon_dir):
+                        if f.startswith("Flag-") and f.endswith(".png"):
+                            zipf.write(os.path.join(icon_dir, f), os.path.join("23icon", f))
+                            
+            messagebox.showinfo("Успех", f"Набор стикеров успешно экспортирован в:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось экспортировать профиль:\n{e}")
+
+    def import_profile(self):
+        """Импортирует конфигурацию стикеров и текстов из ZIP-архива с заменой."""
+        path = filedialog.askopenfilename(
+            filetypes=[("ZIP-архив", "*.zip")],
+            title="Импортировать набор стикеров"
+        )
+        if not path:
+            return
+            
+        if not messagebox.askyesno("Подтверждение", "Импорт сотрет все текущие стикеры и тексты Студии. Продолжить?"):
+            return
+            
+        try:
+            temp_extract_dir = "temp_extract"
+            if os.path.exists(temp_extract_dir):
+                shutil.rmtree(temp_extract_dir)
+            os.makedirs(temp_extract_dir)
+            
+            # Распаковка во временную папку
+            with zipfile.ZipFile(path, 'r') as zipf:
+                zipf.extractall(temp_extract_dir)
+                
+            temp_metadata = os.path.join(temp_extract_dir, "metadata.json")
+            if not os.path.exists(temp_metadata):
+                messagebox.showerror("Ошибка", "Выбранный ZIP-архив не является корректным профилем (отсутствует metadata.json).")
+                shutil.rmtree(temp_extract_dir)
+                return
+                
+            # Перенос файлов в рабочую папку
+            metadata_path = os.path.join("pikcher", "metadata.json")
+            icon_dir = os.path.join("pikcher", "23icon")
+            
+            # Копируем metadata.json
+            shutil.copy(temp_metadata, metadata_path)
+            
+            # Очищаем старые стикеры Flag-*.png из папки 23icon перед импортом
+            if os.path.exists(icon_dir):
+                for f in os.listdir(icon_dir):
+                    if f.startswith("Flag-") and f.endswith(".png"):
+                        try:
+                            os.remove(os.path.join(icon_dir, f))
+                        except Exception:
+                            pass
+            else:
+                os.makedirs(icon_dir, exist_ok=True)
+                
+            # Копируем новые картинки
+            temp_icon_dir = os.path.join(temp_extract_dir, "23icon")
+            if os.path.exists(temp_icon_dir):
+                for f in os.listdir(temp_icon_dir):
+                    src_file = os.path.join(temp_icon_dir, f)
+                    dst_file = os.path.join(icon_dir, f)
+                    shutil.copy(src_file, dst_file)
+                    
+            # Очистка временной директории
+            shutil.rmtree(temp_extract_dir)
+            
+            # Перечитываем метаданные и перерисовываем интерфейс
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                self.metadata = json.load(f)
+                
+            self.select_slot(self.current_slot)
+            self.draw_map()
+            messagebox.showinfo("Успех", "Набор стикеров успешно импортирован!")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось импортировать профиль:\n{e}")
+
+    def open_mod_folder(self):
+        """Открывает в проводнике Windows папку с готовым модом."""
+        try:
+            target_path = os.path.abspath("Сам_Мод")
+            if os.path.exists(target_path):
+                os.startfile(target_path)
+            else:
+                messagebox.showerror("Ошибка", f"Папка {target_path} не найдена.")
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось открыть папку:\n{e}")
 
     def start_build(self):
         """Запускает процесс сборщика мода в отдельном потоке."""
