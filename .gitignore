@@ -38,6 +38,7 @@ dds_tools/
 !pikcher/**/*.png
 !pikcher/**/*.jpg
 !pikcher/**/*.jpeg
+pikcher/backup_migrated/
 
 # Папки для разработки
 scratch/

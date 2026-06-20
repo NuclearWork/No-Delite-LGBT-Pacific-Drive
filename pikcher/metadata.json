@@ -1,0 +1,140 @@
+{
+  "Flag-Abrosexual.png": {
+    "slot_letter": "A",
+    "custom_name": "ААААААААА ЖЕНЩИНА",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Agender.png": {
+    "slot_letter": "B",
+    "custom_name": "ААААААААА НЕГРЫ",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Asexual.png": {
+    "slot_letter": "C",
+    "custom_name": "Где негр",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-BLM.png": {
+    "slot_letter": "D",
+    "custom_name": "Да, Гомер",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Bigender_Redesign.png": {
+    "slot_letter": "E",
+    "custom_name": "Зря ты съел мой обезбол для головы",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Bisexual.png": {
+    "slot_letter": "F",
+    "custom_name": "Зря ты съел мой пончик",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Demisexual.png": {
+    "slot_letter": "G",
+    "custom_name": "Имя, Лабанов",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Gay_Man.png": {
+    "slot_letter": "H",
+    "custom_name": "Мод крутой, не трясёт губой",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Genderfluid.png": {
+    "slot_letter": "I",
+    "custom_name": "Старые стикеры с повесткой",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Genderflux.png": {
+    "slot_letter": "J",
+    "custom_name": "Храни нас император от ереси",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Genderqueer.png": {
+    "slot_letter": "K",
+    "custom_name": "Что вершит судьбу человека",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Intersex.png": {
+    "slot_letter": "L",
+    "custom_name": "Ю сей, май найм",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Lesbian_5_Stripe.png": {
+    "slot_letter": "M",
+    "custom_name": "Юзер этого мода 1",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Lgbtq.png": {
+    "slot_letter": "N",
+    "custom_name": "Юзер этого мода 2",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Lgbtq_progress.png": {
+    "slot_letter": "O",
+    "custom_name": "Юзер этого мода 3",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Neutrois.png": {
+    "slot_letter": "P",
+    "custom_name": "крутое 1",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-NonBinary.png": {
+    "slot_letter": "Q",
+    "custom_name": "крутое 2",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Pangender.png": {
+    "slot_letter": "R",
+    "custom_name": "легалайз нуклеар бомб",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Pansexual.png": {
+    "slot_letter": "S",
+    "custom_name": "мама, я скачал скрейтч",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Polysexual.png": {
+    "slot_letter": "T",
+    "custom_name": "машина брррррр",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Queer.png": {
+    "slot_letter": "U",
+    "custom_name": "нахер ересь",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Straight_Ally.png": {
+    "slot_letter": "V",
+    "custom_name": "ну чё, по пивку",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  },
+  "Flag-Transgender.png": {
+    "slot_letter": "W",
+    "custom_name": "оаао карбюратора аоаоа 1010101",
+    "custom_desc": "Пользовательский стикер.",
+    "is_assigned": true
+  }
+}

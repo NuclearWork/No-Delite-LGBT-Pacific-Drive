@@ -34,9 +34,7 @@ mapping = {
     'Flag-Transgender.png': (384, 640, 192, 128),
 }
 
-# Флаг использования кастомных координат
-is_custom_mapping = False
-
+SLOTS_ORDERED = sorted(mapping.keys())
 
 # Карта строк локализации для замены (оригинальный русский текст -> новые стикеры)
 loc_map = {
@@ -58,12 +56,19 @@ loc_map = {
     'Flag-Neutrois.png': ['Флаг нейтру', 'Флаг сообщества нейтру.'],
     'Flag-NonBinary.png': ['Небинарный флаг', 'Флаг небинарного сообщества.'],
     'Flag-Pangender.png': ['Пангендерный флаг', 'Флаг пангендерного сообщества.'],
-    'Flag-Pansexual.png': ['Пансексуальный флаг', 'Флаг пансексуального сообщества.'],
+    'Flag-Pansexual.png': ['Pansexual flag', 'Пансексуальный флаг', 'Флаг пансексуального сообщества.'], # Добавлено оригинальное имя на всякий случай
     'Flag-Polysexual.png': ['Полисексуальный флаг', 'Флаг полисексуального сообщества.'],
     'Flag-Queer.png': ['Квир-флаг', 'Флаг квир-сообщества.'],
     'Flag-Straight_Ally.png': ['Наклейка гетеросексуального союзника', 'Продемонстрируйте союзничество.'],
     'Flag-Transgender.png': ['Трансгендерный флаг', 'Флаг трансгендерного сообщества.']
 }
+
+# Вспомогательное сопоставление для пансексуалов (оригинальный скрипт мог содержать опечатку)
+if 'Flag-Pansexual.png' not in loc_map:
+    loc_map['Flag-Pansexual.png'] = ['Пансексуальный флаг', 'Флаг пансексуального сообщества.']
+else:
+    # Переопределяем для унификации
+    loc_map['Flag-Pansexual.png'] = ['Пансексуальный флаг', 'Флаг пансексуального сообщества.']
 
 # Пути к файлам и инструментам
 original_icons_dir = r"original_icons\PenDriverPro\Content\UI\Icons\00_Item_Icons\Collectibles\Illo_-_Stickers\Flags"
@@ -81,9 +86,9 @@ def run_command(args):
     """Вспомогательная функция для запуска внешних утилит."""
     result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if result.returncode != 0:
-        print(f"Ошибка при выполнении: {' '.join(args)}")
-        print(f"Stdout: {result.stdout}")
-        print(f"Stderr: {result.stderr}")
+        print(f"Ошибка при выполнении: {' '.join(args)}", flush=True)
+        print(f"Stdout: {result.stdout}", flush=True)
+        print(f"Stderr: {result.stderr}", flush=True)
         raise RuntimeError(f"Команда завершилась с ошибкой: {result.returncode}")
     return result.stdout
 
@@ -115,122 +120,170 @@ def encode_and_fit(text, target_len, encoding):
             encoded += b'\x00' * (target_len - len(encoded))
         return encoded
 
+def migrate_if_needed():
+    """Проводит автоматическую миграцию старых кастомных файлов, если они есть."""
+    pikcher_dir = "pikcher"
+    icon_dir = os.path.join(pikcher_dir, "23icon")
+    metadata_path = os.path.join(pikcher_dir, "metadata.json")
+    
+    if not os.path.exists(pikcher_dir):
+        os.makedirs(pikcher_dir)
+    if not os.path.exists(icon_dir):
+        os.makedirs(icon_dir)
+        
+    # Если метаданные уже созданы, просто загружаем их
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+
+    # Сканируем папку 23icon на предмет кастомных (старых) картинок
+    all_files = [f for f in os.listdir(icon_dir) if os.path.isfile(os.path.join(icon_dir, f))]
+    custom_files = [f for f in all_files if not f.startswith("Flag-")]
+    
+    metadata = {}
+    
+    # Инициализация дефолтной структуры метаданных
+    for i, slot in enumerate(SLOTS_ORDERED):
+        letter = chr(65 + i)
+        orig_vals = loc_map.get(slot, ["Стикер", "Стикер из игры."])
+        orig_name = orig_vals[0]
+        orig_desc = orig_vals[1] if len(orig_vals) > 1 else "Пользовательский стикер."
+        metadata[slot] = {
+            "slot_letter": letter,
+            "custom_name": orig_name,
+            "custom_desc": orig_desc,
+            "is_assigned": False
+        }
+        
+    # Если найдено ровно 23 старых файла, запускаем миграцию
+    if len(custom_files) == 23:
+        print("Обнаружено 23 кастомных файла в 23icon. Запуск автоматической миграции...", flush=True)
+        custom_files_sorted = sorted(custom_files)
+        backup_dir = os.path.join(pikcher_dir, "backup_migrated")
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        for slot, custom_file in zip(SLOTS_ORDERED, custom_files_sorted):
+            src_path = os.path.join(icon_dir, custom_file)
+            dst_path = os.path.join(icon_dir, slot)
+            
+            try:
+                # Конвертируем в PNG и сохраняем по слоту
+                img = Image.open(src_path).convert("RGBA")
+                img.save(dst_path, "PNG")
+                
+                # Старое имя файла пишем как название наклейки
+                name_without_ext = os.path.splitext(custom_file)[0]
+                metadata[slot]["custom_name"] = name_without_ext
+                metadata[slot]["custom_desc"] = "Пользовательский стикер."
+                metadata[slot]["is_assigned"] = True
+                
+                # Перемещаем оригинал в бэкап
+                shutil.move(src_path, os.path.join(backup_dir, custom_file))
+            except Exception as e:
+                print(f"Ошибка миграции файла {custom_file}: {e}", flush=True)
+                
+        print(f"Миграция успешно завершена! Оригиналы сохранены в: {backup_dir}", flush=True)
+    else:
+        # Проверяем, есть ли уже файлы с названиями слотов Flag-*.png
+        for slot in SLOTS_ORDERED:
+            path = os.path.join(icon_dir, slot)
+            if os.path.exists(path):
+                metadata[slot]["is_assigned"] = True
+
+    # Сохраняем файл метаданных
+    with open(metadata_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+        
+    return metadata
+
 def main():
-    # Получаем отсортированные списки оригинальных иконок и картинок пользователя
-    orig_pngs = sorted(glob.glob("original_pngs/*.png"))
-    pics = sorted(glob.glob("pikcher/23icon/*"))
-
-    if len(orig_pngs) != 23 or len(pics) != 23:
-        print(f"Ошибка: Требуется ровно 23 файла. Найдено оригинальных: {len(orig_pngs)}, пользовательских: {len(pics)}")
-        return
-
-    # Шаг 1. Восстановление исходных файлов
-    print("Восстанавливаем оригинальные UI-иконки из бэкапа...")
+    print("[STAGE 1/6] Запуск миграции и инициализация метаданных...", flush=True)
+    metadata = migrate_if_needed()
+    
+    # Восстановление исходных файлов
+    print("[STAGE 2/6] Восстановление оригинальных UI-иконки из бэкапа...", flush=True)
     if not os.path.exists(extracted_icons_dir):
         os.makedirs(extracted_icons_dir)
     for ext in ["*.uasset", "*.uexp"]:
         for f in glob.glob(os.path.join(original_icons_dir, ext)):
             shutil.copy(f, extracted_icons_dir)
 
-    print("Копируем оригинальный Game.locres из папки игры...")
+    print("Копируем оригинальный Game.locres из папки игры...", flush=True)
     os.makedirs(os.path.dirname(extracted_locres_path), exist_ok=True)
     shutil.copy(steam_locres_path, extracted_locres_path)
 
-    # Шаг 2. Генерация нового полностью пустого атласа
-    print("Создаем новый прозрачный атлас 1024x1024 (оригинальные флаги стерты)...")
+    # Генерация нового пустого прозрачного атласа
+    print("[STAGE 3/6] Создаем прозрачный атлас 1024x1024 (оригинальные pride-флаги удалены)...", flush=True)
     atlas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
 
-    # Шаг 3. Обработка картинок пользователя для атласа и UI-иконок
-    for orig_path, pic_path in zip(orig_pngs, pics):
-        name = os.path.basename(orig_path)
-        pic_name_no_ext = os.path.splitext(os.path.basename(pic_path))[0]
+    icon_dir = os.path.join("pikcher", "23icon")
+
+    # Обработка картинок пользователя для атласа и UI-иконок
+    print("[STAGE 4/6] Обработка слотов стикеров...", flush=True)
+    for slot_name in SLOTS_ORDERED:
+        x, y, w, h = mapping[slot_name]
+        pic_path = os.path.join(icon_dir, slot_name)
+        is_assigned = metadata.get(slot_name, {}).get("is_assigned", False) and os.path.exists(pic_path)
         
-        if name not in mapping:
-            print(f"Пропущено сопоставление координат для {name}")
-            continue
-            
-        x, y, w, h = mapping[name]
-        print(f"Обработка: {pic_name_no_ext} (для слота {name})...")
-
-        # Открываем изображение пользователя
-        pic = Image.open(pic_path).convert("RGBA")
-        W_pic, H_pic = pic.size
-
-        # Определяем физические размеры на кузове машины
-        if name == 'Flag-BLM.png':
-            W_poly, H_poly = 384, 436
+        # Размеры ячейки
+        if slot_name == 'Flag-BLM.png':
             W_cell, H_cell = 192, 256
         else:
-            W_poly, H_poly = 384, 229
             W_cell, H_cell = 192, 128
 
-        # --- 3.1 Вставка в атлас ---
-        if is_custom_mapping:
-            # Если координаты настроены пользователем вручную, используем их напрямую
-            new_w = w
-            new_h = h
-            ox = 0
-            oy = 0
-        elif W_pic == W_cell and H_pic == H_cell:
-            # Если пользователь загрузил картинку, идеально совпадающую с ячейкой
-            # (например, из нашей Студии), вставляем её как есть без отступов
-            pic_resized_atlas = pic
-            new_w = W_cell
-            new_h = H_cell
-            ox = 0
-            oy = 0
-        else:
-            # Используем кроп (заполнение ячейки с обрезкой краев), чтобы картинка была максимально крупной.
-            # Оставляем минимальный отступ 5%, чтобы избежать сильного протекания на соседние ячейки
-            padding_x = int(W_cell * 0.05)
-            padding_y = int(H_cell * 0.05)
-            
-            target_w = W_cell - padding_x * 2
-            target_h = H_cell - padding_y * 2
-            
-            # Вычисляем масштаб для заполнения (максимальный из двух)
-            scale_to_fill = max(target_w / W_pic, target_h / H_pic)
-            
-            w_scaled = int(round(W_pic * scale_to_fill))
-            h_scaled = int(round(H_pic * scale_to_fill))
-            
-            # Масштабируем картинку
-            pic_scaled = pic.resize((w_scaled, h_scaled), Image.Resampling.LANCZOS)
-            
-            # Обрезаем центр (кроп)
-            left = (w_scaled - target_w) / 2
-            top = (h_scaled - target_h) / 2
-            right = (w_scaled + target_w) / 2
-            bottom = (h_scaled + target_h) / 2
-            
-            pic_cropped = pic_scaled.crop((left, top, right, bottom))
-            
-            # Настройки для вставки в атлас
-            pic_resized_atlas = pic_cropped
-            new_w = target_w
-            new_h = target_h
-            ox = padding_x
-            oy = padding_y
-
-        # Вставляем картинку в атлас
-        atlas.paste(pic_resized_atlas, (x + ox, y + oy), pic_resized_atlas)
-
-        # --- 3.2 Генерация UI-иконки ---
-        # Целевые размеры UI-иконки в меню
+        # Целевые размеры UI-иконки в меню игры
         W_target = 384
-        H_target = 436 if name == 'Flag-BLM.png' else 229
+        H_target = 436 if slot_name == 'Flag-BLM.png' else 229
 
         ui_img = Image.new("RGBA", (W_target, H_target), (0, 0, 0, 0))
-        scale_ui = min(W_target / W_pic, H_target / H_pic)
-        new_w_ui = int(round(W_pic * scale_ui))
-        new_h_ui = int(round(H_pic * scale_ui))
 
-        pic_resized_ui = pic.resize((new_w_ui, new_h_ui), Image.Resampling.LANCZOS)
-        ox_ui = (W_target - new_w_ui) // 2
-        oy_ui = (H_target - new_h_ui) // 2
-        ui_img.paste(pic_resized_ui, (ox_ui, oy_ui), pic_resized_ui)
+        if is_assigned:
+            print(f"Обработка слота {metadata[slot_name]['slot_letter']} ({slot_name})...", flush=True)
+            pic = Image.open(pic_path).convert("RGBA")
+            W_pic, H_pic = pic.size
 
-        # Сохраняем UI-иконку во временный файл
+            # 1. Вставка в атлас
+            if W_pic == W_cell and H_pic == H_cell:
+                # Если картинка подготовлена студией с точным разрешением
+                atlas.paste(pic, (x, y), pic)
+            else:
+                # Автоматический кроп для неидеальных размеров
+                padding_x = int(W_cell * 0.05)
+                padding_y = int(H_cell * 0.05)
+                target_w = W_cell - padding_x * 2
+                target_h = H_cell - padding_y * 2
+                
+                scale_to_fill = max(target_w / W_pic, target_h / H_pic)
+                w_scaled = int(round(W_pic * scale_to_fill))
+                h_scaled = int(round(H_pic * scale_to_fill))
+                
+                pic_scaled = pic.resize((w_scaled, h_scaled), Image.Resampling.LANCZOS)
+                
+                left = (w_scaled - target_w) / 2
+                top = (h_scaled - target_h) / 2
+                right = (w_scaled + target_w) / 2
+                bottom = (h_scaled + target_h) / 2
+                
+                pic_cropped = pic_scaled.crop((left, top, right, bottom))
+                atlas.paste(pic_cropped, (x + padding_x, y + padding_y), pic_cropped)
+
+            # 2. Вставка в UI-иконку
+            scale_ui = min(W_target / W_pic, H_target / H_pic)
+            new_w_ui = int(round(W_pic * scale_ui))
+            new_h_ui = int(round(H_pic * scale_ui))
+            pic_resized_ui = pic.resize((new_w_ui, new_h_ui), Image.Resampling.LANCZOS)
+            ox_ui = (W_target - new_w_ui) // 2
+            oy_ui = (H_target - new_h_ui) // 2
+            ui_img.paste(pic_resized_ui, (ox_ui, oy_ui), pic_resized_ui)
+        else:
+            # Слот пуст. Оставляем его прозрачным в атласе.
+            # UI-иконка также останется пустой (прозрачной)
+            pass
+
+        # Сохраняем UI-иконку
         temp_png = "temp.png"
         ui_img.save(temp_png)
 
@@ -238,52 +291,63 @@ def main():
         run_command([texconv_exe, "-f", "B8G8R8A8_UNORM", "-m", "1", "-y", "-o", ".", temp_png])
 
         # Инжектируем DDS в uasset UI-иконки
-        uasset_path = os.path.join(extracted_icons_dir, name.replace(".png", ".uasset"))
+        uasset_path = os.path.join(extracted_icons_dir, slot_name.replace(".png", ".uasset"))
         run_command([dds_tools_python, dds_tools_script, uasset_path, "temp.dds", "--save_folder", os.path.dirname(uasset_path)])
 
     # Сохраняем атлас и конвертируем его
-    print("Сохраняем атлас и конвертируем его в DDS...")
+    print("Сохраняем новый атлас и конвертируем в DDS...", flush=True)
     atlas.save("T_Flags_01_D_mod.png")
     run_command([texconv_exe, "-f", "BC3_UNORM", "-y", "-o", ".", "T_Flags_01_D_mod.png"])
     run_command([dds_tools_python, dds_tools_script, atlas_uasset, "T_Flags_01_D_mod.dds", "--save_folder", os.path.dirname(atlas_uasset)])
 
     # Шаг 4. Патч строк локализации в Game.locres
-    print("Применяем патч локализации к Game.locres...")
+    print("[STAGE 5/6] Применяем патч локализации к Game.locres...", flush=True)
     with open(extracted_locres_path, 'rb') as f:
         locres_data = f.read()
 
     patched_count = 0
-    for orig_path, pic_path in zip(orig_pngs, pics):
-        orig_name = os.path.basename(orig_path)
-        pic_name = os.path.splitext(os.path.basename(pic_path))[0]
-        
-        if orig_name not in loc_map:
+    for slot_name in SLOTS_ORDERED:
+        if slot_name not in loc_map:
             continue
             
-        for orig_str in loc_map[orig_name]:
+        is_assigned = metadata.get(slot_name, {}).get("is_assigned", False)
+        
+        # Получаем новые строки локализации
+        if is_assigned:
+            new_name = metadata[slot_name].get("custom_name", "Стикер")
+            new_desc = metadata[slot_name].get("custom_desc", "Пользовательский стикер.")
+        else:
+            new_name = "Пустой слот"
+            new_desc = "Стикер удален."
+
+        orig_strs = loc_map[slot_name]
+        
+        for idx, orig_str in enumerate(orig_strs):
+            new_val = new_name if idx == 0 else new_desc
+            
             for encoding in ['utf-16-le', 'utf-8']:
                 for search_str in [orig_str, orig_str.upper()]:
                     search_bytes = search_str.encode(encoding)
                     if search_bytes in locres_data:
                         target_len = len(search_bytes)
-                        replace_bytes = encode_and_fit(pic_name, target_len, encoding)
+                        replace_bytes = encode_and_fit(new_val, target_len, encoding)
                         locres_data = locres_data.replace(search_bytes, replace_bytes)
                         patched_count += 1
 
     with open(extracted_locres_path, 'wb') as f:
         f.write(locres_data)
-    print(f"Патч локализации завершен! Успешно изменено строк: {patched_count}")
+    print(f"Патч локализации завершен! Успешно изменено строк: {patched_count}", flush=True)
 
     # Шаг 5. Упаковка пака с модом
     mod_name = "ZZZZ_NOPRIDE_P.pak"
-    print(f"Упаковываем мод в {mod_name}...")
+    print(f"[STAGE 6/6] Упаковываем мод в {mod_name}...", flush=True)
     if os.path.exists(mod_name):
         os.remove(mod_name)
     
     ubulk_path = atlas_uasset.replace(".uasset", ".ubulk")
     if os.path.exists(ubulk_path):
         os.remove(ubulk_path)
-        print("Удален неиспользуемый файл ubulk перед упаковкой.")
+        print("Удален неиспользуемый файл ubulk перед упаковкой.", flush=True)
 
     run_command([repak_exe, "pack", "extracted", mod_name])
 
@@ -291,21 +355,21 @@ def main():
     steam_pak_dir = r"Z:\SteamLibrary\steamapps\common\Pacific Drive\PenDriverPro\Content\Paks\~mods"
     os.makedirs(steam_pak_dir, exist_ok=True)
     
-    print("Удаляем старые версии мода из папки Steam...")
+    print("Удаляем старые версии мода из папки Steam...", flush=True)
     for old_pak in glob.glob(os.path.join(steam_pak_dir, "*NoPride_P*.pak")) + glob.glob(os.path.join(steam_pak_dir, "*NOPRIDE_P*.pak")):
         try:
             os.remove(old_pak)
-            print(f"Удален старый мод: {old_pak}")
+            print(f"Удален старый мод: {old_pak}", flush=True)
         except Exception as e:
-            print(f"Не удалось удалить {old_pak}: {e}")
+            print(f"Не удалось удалить {old_pak}: {e}", flush=True)
 
     steam_pak_path = os.path.join(steam_pak_dir, mod_name)
-    print(f"Копируем собранный {mod_name} в папку модов игры Steam...")
+    print(f"Копируем собранный {mod_name} в папку модов игры Steam...", flush=True)
     shutil.copy(mod_name, steam_pak_path)
-    print(f"Мод успешно скопирован в папку игры: {steam_pak_path}")
+    print(f"Мод успешно скопирован в папку игры: {steam_pak_path}", flush=True)
 
-    # Шаг 6. Генерация документации для GitHub
-    print("Генерация документации для GitHub...")
+    # Генерация документации для GitHub
+    print("Генерация документации для GitHub...", flush=True)
     docs_dir = "docs"
     os.makedirs(docs_dir, exist_ok=True)
     
@@ -327,27 +391,23 @@ def main():
 
 ## Для разработчиков (Как собрать мод самому)
 Если вы хотите использовать свои собственные картинки:
-1. Поместите 23 квадратных (или около того) картинок в формате `.jpg` или `.png` в папку `pikcher/23icon/`.
-2. Запустите скрипт `python build_mod.py`.
-3. Скрипт автоматически:
-   - Создаст новый атлас `T_Flags_01_D` с вашими картинками.
-   - Сгенерирует UI-иконки для меню.
-   - Обновит файл русской локализации `Game.locres`.
-   - Упакует всё в готовый `zzzz_NoPride_P.pak` и скопирует в вашу папку Steam!
+1. Используйте `NoPrideStudio.exe` для загрузки картинок по слотам (от A до W).
+2. Запустите сборку прямо из Студии или с помощью `python build_mod.py`.
+3. Скрипт автоматически обновит локализацию, атлас и упакует в готовый пак модов!
 """
     with open(os.path.join(docs_dir, "README.md"), "w", encoding="utf-8") as f:
         f.write(readme_content)
     with open("README.md", "w", encoding="utf-8") as f:
         f.write(readme_content)
-    print("Документация сгенерирована (README.md).")
+    print("Документация сгенерирована (README.md).", flush=True)
 
-    # Шаг 6. Очистка временных файлов
-    print("Очистка временных файлов...")
+    # Очистка временных файлов
+    print("Очистка временных файлов...", flush=True)
     for temp_file in ["temp.png", "temp.dds", "T_Flags_01_D_mod.png", "T_Flags_01_D_mod.dds"]:
         if os.path.exists(temp_file):
             os.remove(temp_file)
 
-    print("Все шаги выполнены успешно! Мод собран в ZZZZ_NOPRIDE_P.pak.")
+    print("Все шаги выполнены успешно! Мод собран в ZZZZ_NOPRIDE_P.pak.", flush=True)
 
 if __name__ == '__main__':
     main()

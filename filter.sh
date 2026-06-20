@@ -1,0 +1,1 @@
+git filter-branch --env-filter 'export GIT_COMMITTER_NAME="NuclearWork"; export GIT_COMMITTER_EMAIL="NuclearWork@users.noreply.github.com"; export GIT_AUTHOR_NAME="NuclearWork"; export GIT_AUTHOR_EMAIL="NuclearWork@users.noreply.github.com"' --force -- --all
