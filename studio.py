@@ -648,10 +648,8 @@ class StickerStudio(ctk.CTk):
         """Открывает в проводнике Windows папку с готовым модом."""
         try:
             target_path = os.path.abspath("Сам_Мод")
-            if os.path.exists(target_path):
-                os.startfile(target_path)
-            else:
-                messagebox.showerror("Ошибка", f"Папка {target_path} не найдена.")
+            os.makedirs(target_path, exist_ok=True)
+            os.startfile(target_path)
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось открыть папку:\n{e}")
 

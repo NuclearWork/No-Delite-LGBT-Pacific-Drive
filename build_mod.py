@@ -356,9 +356,9 @@ def main():
 
     # Копирование собранного пака в папку "Сам_Мод" для релиза/гитхаба
     sam_mod_dir = "Сам_Мод"
-    if os.path.exists(sam_mod_dir):
-        shutil.copy(mod_name, os.path.join(sam_mod_dir, mod_name))
-        print(f"Копия мода сохранена в папку {sam_mod_dir}", flush=True)
+    os.makedirs(sam_mod_dir, exist_ok=True)
+    shutil.copy(mod_name, os.path.join(sam_mod_dir, mod_name))
+    print(f"Копия мода сохранена в папку {sam_mod_dir}", flush=True)
 
     # Очищаем старые файлы в локальной папке перед завершением
     pass
