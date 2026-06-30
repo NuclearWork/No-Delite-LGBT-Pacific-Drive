@@ -156,7 +156,7 @@ class StickerStudio(ctk.CTk):
         
         ctk.CTkLabel(
             self.folder_info_frame, 
-            text="Папка собранного мода: Сам_Мод/", 
+            text="Папка собранного мода: pikcher/Сам_Мод/", 
             font=("Arial", 11, "bold"),
             text_color="#aaaaaa"
         ).grid(row=0, column=0, sticky="w", padx=5)
@@ -647,7 +647,7 @@ class StickerStudio(ctk.CTk):
     def open_mod_folder(self):
         """Открывает в проводнике Windows папку с готовым модом."""
         try:
-            target_path = os.path.abspath("Сам_Мод")
+            target_path = os.path.abspath(os.path.join("pikcher", "Сам_Мод"))
             os.makedirs(target_path, exist_ok=True)
             os.startfile(target_path)
         except Exception as e:
@@ -689,7 +689,7 @@ class StickerStudio(ctk.CTk):
 
     def prompt_save_mod(self):
         """Предлагает пользователю сохранить собранный мод в его папку с игрой."""
-        mod_path = os.path.join("Сам_Мод", "ZZZZ_NOPRIDE_P.pak")
+        mod_path = os.path.join("pikcher", "Сам_Мод", "ZZZZ_NOPRIDE_P.pak")
         if not os.path.exists(mod_path):
             return
             

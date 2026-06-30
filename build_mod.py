@@ -362,20 +362,26 @@ def main():
 
     run_command([repak_exe, "pack", os.path.join(BASE_DIR, "extracted"), mod_name])
 
-    # Копирование собранного пака в папку "Сам_Мод" для релиза/гитхаба
-    sam_mod_dir = "Сам_Мод"
+    # Копирование собранного пака в папку "pikcher/Сам_Мод" для удобства пользователя
+    sam_mod_dir = os.path.join("pikcher", "Сам_Мод")
     os.makedirs(sam_mod_dir, exist_ok=True)
     shutil.copy(mod_name, os.path.join(sam_mod_dir, mod_name))
     print(f"Копия мода сохранена в папку {sam_mod_dir}", flush=True)
 
+    # Удаляем временный .pak файл из корня (чтобы не мусорить на Рабочем столе)
+    if os.path.exists(mod_name):
+        os.remove(mod_name)
+
     # Очищаем старые файлы в локальной папке перед завершением
     pass
-    # Генерация документации для GitHub
-    print("Генерация документации для GitHub...", flush=True)
-    docs_dir = "docs"
-    os.makedirs(docs_dir, exist_ok=True)
-    
-    readme_content = """# Pacific Drive: No Pride Mod (Custom Stickers)
+
+    # Генерация документации для GitHub (только для разработчиков, не делаем в скомпилированном EXE)
+    if not getattr(sys, 'frozen', False):
+        print("Генерация документации для GitHub...", flush=True)
+        docs_dir = "docs"
+        os.makedirs(docs_dir, exist_ok=True)
+        
+        readme_content = """# Pacific Drive: No Pride Mod (Custom Stickers)
 
 Этот мод заменяет все 23 радужных стикера и наклейки (LGBTQ+) в игре Pacific Drive на пользовательские мемы и картинки.
 
@@ -397,11 +403,11 @@ def main():
 2. Запустите сборку прямо из Студии или с помощью `python build_mod.py`.
 3. Скрипт автоматически обновит локализацию, атлас и упакует в готовый пак модов!
 """
-    with open(os.path.join(docs_dir, "README.md"), "w", encoding="utf-8") as f:
-        f.write(readme_content)
-    with open("README.md", "w", encoding="utf-8") as f:
-        f.write(readme_content)
-    print("Документация сгенерирована (README.md).", flush=True)
+        with open(os.path.join(docs_dir, "README.md"), "w", encoding="utf-8") as f:
+            f.write(readme_content)
+        with open("README.md", "w", encoding="utf-8") as f:
+            f.write(readme_content)
+        print("Документация сгенерирована (README.md).", flush=True)
 
     # Очистка временных файлов
     print("Очистка временных файлов...", flush=True)
@@ -409,7 +415,7 @@ def main():
         if os.path.exists(temp_file):
             os.remove(temp_file)
 
-    print("Все шаги выполнены успешно! Мод собран в ZZZZ_NOPRIDE_P.pak.", flush=True)
+    print("Все шаги выполнены успешно! Мод собран в pikcher/Сам_Мод/ZZZZ_NOPRIDE_P.pak.", flush=True)
 
 if __name__ == '__main__':
     main()
