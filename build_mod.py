@@ -70,16 +70,24 @@ else:
     # Переопределяем для унификации
     loc_map['Flag-Pansexual.png'] = ['Пансексуальный флаг', 'Флаг пансексуального сообщества.']
 
-# Пути к файлам и инструментам
-original_icons_dir = r"original_icons\PenDriverPro\Content\UI\Icons\00_Item_Icons\Collectibles\Illo_-_Stickers\Flags"
-extracted_icons_dir = r"extracted\PenDriverPro\Content\UI\Icons\00_Item_Icons\Collectibles\Illo_-_Stickers\Flags"
-extracted_locres_path = r"extracted\PenDriverPro\Content\Localization\Game\ru\Game.locres"
-atlas_uasset = r"extracted\PenDriverPro\Content\Gameplay\Inventory\Items\Car\Cosmetic\Bumper_Sticker\Materials\T_Flags_01_D.uasset"
+import sys
+import os
 
-texconv_exe = r".\texconv.exe"
-dds_tools_python = r".\dds_tools\python\python.exe"
-dds_tools_script = r".\dds_tools\src\main.py"
-repak_exe = r".\repak.exe"
+# Определение базовой папки для поиска инструментов и оригинальных ресурсов
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+original_icons_dir = os.path.join(BASE_DIR, "original_icons", "PenDriverPro", "Content", "UI", "Icons", "00_Item_Icons", "Collectibles", "Illo_-_Stickers", "Flags")
+extracted_icons_dir = os.path.join(BASE_DIR, "extracted", "PenDriverPro", "Content", "UI", "Icons", "00_Item_Icons", "Collectibles", "Illo_-_Stickers", "Flags")
+extracted_locres_path = os.path.join(BASE_DIR, "extracted", "PenDriverPro", "Content", "Localization", "Game", "ru", "Game.locres")
+atlas_uasset = os.path.join(BASE_DIR, "extracted", "PenDriverPro", "Content", "Gameplay", "Inventory", "Items", "Car", "Cosmetic", "Bumper_Sticker", "Materials", "T_Flags_01_D.uasset")
+
+texconv_exe = os.path.join(BASE_DIR, "texconv.exe")
+dds_tools_python = os.path.join(BASE_DIR, "dds_tools", "python", "python.exe")
+dds_tools_script = os.path.join(BASE_DIR, "dds_tools", "src", "main.py")
+repak_exe = os.path.join(BASE_DIR, "repak.exe")
 
 def run_command(args):
     """Вспомогательная функция для запуска внешних утилит."""
@@ -352,7 +360,7 @@ def main():
         os.remove(ubulk_path)
         print("Удален неиспользуемый файл ubulk перед упаковкой.", flush=True)
 
-    run_command([repak_exe, "pack", "extracted", mod_name])
+    run_command([repak_exe, "pack", os.path.join(BASE_DIR, "extracted"), mod_name])
 
     # Копирование собранного пака в папку "Сам_Мод" для релиза/гитхаба
     sam_mod_dir = "Сам_Мод"

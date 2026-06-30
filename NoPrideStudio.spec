@@ -5,7 +5,15 @@ a = Analysis(
     ['studio.py'],
     pathex=[],
     binaries=[],
-    datas=[('pikcher/23icon/*.png', 'pikcher/23icon'), ('pikcher/metadata.json', 'pikcher')],
+    datas=[
+        ('pikcher/23icon/*.png', 'pikcher/23icon'), 
+        ('pikcher/metadata.json', 'pikcher'),
+        ('texconv.exe', '.'),
+        ('repak.exe', '.'),
+        ('dds_tools/', 'dds_tools'),
+        ('original_icons/', 'original_icons'),
+        ('extracted/', 'extracted')
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
